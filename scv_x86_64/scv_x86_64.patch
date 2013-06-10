@@ -1,0 +1,268 @@
+--- ./scripts/Makefile.am.orig	2003-08-08 00:38:02.000000000 +0900
++++ ./scripts/Makefile.am	2011-04-08 13:24:21.000000000 +0900
+@@ -42,20 +42,20 @@
+ 
+ all : all-am create_copiers
+ 
++# create copyDir.sh
++# create copyExamples.sh
++# create copyFiles.sh
++# set permissions
+ create_copiers :
+-	# create copyDir.sh
+ 	echo "#!/bin/sh -h" >copyDir.sh
+ 	echo "overwrite=${overwrite_files}" >>copyDir.sh
+ 	cat ${srcdir}/copyDir.sh.in >>copyDir.sh
+-	# create copyExamples.sh
+ 	if test ! -r copyExamples.sh; then \
+ 	  cp ${srcdir}/copyExamples.sh .; \
+ 	fi
+-	# create copyFiles.sh
+ 	echo "#!/bin/sh -h" >copyFiles.sh
+ 	echo "overwrite=${overwrite_files}" >>copyFiles.sh
+ 	cat ${srcdir}/copyFiles.sh.in >>copyFiles.sh
+-	# set permissions
+ 	chmod a+x copyDir.sh copyFiles.sh
+ 
+ clean-worker :
+--- ./configure.in.orig	2006-01-24 04:29:08.000000000 +0900
++++ ./configure.in	2011-04-08 14:25:26.000000000 +0900
+@@ -445,6 +445,7 @@
+ dnl
+ is_hppa="no"
+ is_linux="no"
++is_linux64="no"
+ is_sparc="no"
+ case "$target_cpu" in
+ sparc)
+@@ -453,6 +454,8 @@
+ 	is_hppa="yes";;
+ i[[3456]]86*)
+ 	is_linux="yes";;
++x86_64*)
++	is_linux64="yes";;
+ *)
+ 	AC_MSG_ERROR(Target CPU type not supported: "$target_cpu");;
+ esac
+@@ -818,6 +821,51 @@
+ 	     CXX_VER=`$CXX -dumpversion | awk -F. '{print $1"."$2}'`
+ 	     ;;
+         esac;;
++x86_64*) 
++	AC_DEFINE(SHLIB_EXT,".so")
++	SHLIB_EXT=.so
++	SH_LIB_EXT=so
++	echo 'setting compiler flags for Intel (Linux)'
++        muldefs="-Wl,-z,muldefs"
++	case "$GXX" in
++        yes) echo 'setting compiler flags for g++'
++	     AC_DEFINE(_USE_FRIEND_FOR_EQUAL,)
++	     AC_DEFINE(ARCH_IS_X86,)
++	     CXXFLAGS="$LINUX_GNU_CXXFLAGS $GNU_OPT $GNU_DBG $GNU_PIC"
++	     CXXFLAGS_DEBUG="$LINUX_GNU_CXXFLAGS $DEF_GNU_DBG $GNU_PIC"
++	     CXXFLAGS_OPT="$LINUX_GNU_CXXFLAGS $DEF_GNU_OPT $GNU_PIC"
++	     CFLAGS="$GNU_OPT $GNU_DBG $GNU_PIC"
++	     CFLAGS_DEBUG="$DEF_GNU_DBG $GNU_PIC"
++	     CFLAGS_OPT="$DEF_GNU_OPT $GNU_PIC"
++             OPTFLAGS="$GNU_OPT"
++             DBGFLAGS="$GNU_DBG"
++             PICFLAGS="$GNU_PIC"
++             scvCXXopts="$LINUX_GNU_CXXFLAGS $GNU_DBG $GNU_PIC"
++             cxxDepFlags="-M -MMD"
++	     scvLinkerOpts="$SHARED $EXPORT_DYNAMIC $UNDEF_SYMBOLS"
++	     CXX_NAME=gcc
++	     CXX_FULL_VER=`$CXX -dumpversion`
++	     CXX_VER=`echo $CXX_FULL_VER | awk -F. '{print $1"."$2}'`
++	     echo 'setting library options for g++ on Intel Linux'
++	     ;;
++        '')  echo 'setting compiler flags for NOT g++'
++	     CXXFLAGS="$LINUX_GNU_CXXFLAGS $GNU_OPT $GNU_DBG"
++	     CXXFLAGS_DEBUG="$LINUX_GNU_CXXFLAGS $DEF_GNU_DBG"
++	     CXXFLAGS_OPT="$LINUX_GNU_CXXFLAGS $DEF_GNU_OPT"
++	     CFLAGS="$GNU_OPT $GNU_DBG"
++	     CFLAGS_DEBUG="$DEF_GNU_DBG"
++	     CFLAGS_OPT="$DEF_GNU_OPT"
++             OPTFLAGS="$GNU_OPT"
++             DBGFLAGS="$GNU_DBG"
++             PICFLAGS="$GNU_PIC"
++	     scvCXXopts="$LINUX_GNU_CXXFLAGS $GNU_DBG $GNU_PIC"
++             cxxDepFlags=""
++	     scvLinkerOpts="-G $EXPORT_DYNAMIC $UNDEF_SYMBOLS"
++	     CXX_NAME=gcc
++	     CXX_VER=`$CXX -dumpversion | awk -F. '{print $1"."$2}'`
++	     ;;
++        esac;;
++
+ *)
+ 	AC_MSG_ERROR(Target CPU type not supported: "$target_cpu");;
+ esac
+@@ -829,7 +877,13 @@
+   AC_DEFINE(_USE_FRIEND_FOR_EQUAL,)
+ elif test "$GXX" = "yes"; then
+   AC_DEFINE(_USE_PADDING_ON_STRUCTS,)
+-  AC_DEFINE(_USE_HASH_MAP,)
++  GXX_MAJOR_VER=`echo $CXX_FULL_VER | awk -F. '{print $1}'`
++  GXX_MINOR_VER=`echo $CXX_FULL_VER | awk -F. '{print $2}'`
++  if test $GXX_MAJOR_VER -ge 4 -o $GXX_MAJOR_VER -eq 3 -a $GXX_MINOR_VER -ge 4; then
++    echo "G++ Verison is " $CXX_FULL_VER ", undef _USE_HASH_MAP"
++  else
++      AC_DEFINE(_USE_HASH_MAP,)
++  fi
+ fi
+ 
+ dnl
+@@ -924,6 +978,9 @@
+       *) SYSC_TARGET="gccsparcOS5";;
+     esac
+     ;;
++  x86_64*linux*)
++    if test "$rh_gxx_prog" = "no"; then EXTRA_GNU_DIR="/gnu"; fi
++    SYSC_TARGET="linux64";;
+   *linux*)
+     if test "$rh_gxx_prog" = "no"; then EXTRA_GNU_DIR="/gnu"; fi
+     SYSC_TARGET="linux";;
+--- ./acinclude.m4.orig	2003-08-08 00:38:06.000000000 +0900
++++ ./acinclude.m4	2011-04-08 13:27:22.000000000 +0900
+@@ -64,36 +64,36 @@
+ namespace std {}
+ using namespace std;
+ #include <string>
+-#include <stdio.h>
+-#include <strstream.h>
++#include <cstdio>
++#include <sstream>
+ int main()
+ {
+ #define STRING_SIZE 100
+   char buf[STRING_SIZE];
+   int i = 1;
+-  sprintf(buf, "hello world %i", i);
+-  if (strcmp(buf,"hello world 1") != 0)
++  std::sprintf(buf, "hello world %i", i);
++  if (std::strcmp(buf,"hello world 1") != 0)
+   {
+-    exit(1);
++      std::exit(1);
+   }
+ 
+-  ostrstream outString(buf, STRING_SIZE);
++  std::ostringstream outString;
+   outString << "hello world " << i;
+-  if (strcmp(buf,"hello world 1") != 0)
++  if (std::strcmp(buf,"hello world 1") != 0)
+   {
+-    exit(1);
++      std::exit(1);
+   }
+ 
+-  string str = "hello world";
++  std::string str = "hello world";
+   str = str + " 1";
+   if (str != "hello world 1")
+   {
+-     exit(1);
++      std::exit(1);
+   }
+   //
+   // OK!
+   //
+-  exit(0);
++  std::exit(0);
+ }]
+ EOF
+     if eval ./test.sh; then
+@@ -213,10 +213,10 @@
+ testT test[[]] = {{"test0",5,2},{"test1",3,3},{0}};
+ EOF
+     cat > t2conftest.cc <<EOF
+-[#include <iostream.h>
+-#include <string.h>
+-#include <stdlib.h>
+-#include <stdio.h>
++[#include <iostream>
++#include <cstring>
++#include <cstdlib>
++#include <cstdio>
+ struct testT { const char* name; int i; int j;};
+ static testT (*testP)[];
+ extern testT test[];
+@@ -225,12 +225,12 @@
+   static char str[10];
+   int i=0, failed=0;
+   while((*testP)[i].name){
+-    sprintf(str, "test%d",i);
+-    if(strcmp(str, (*testP)[i].name) != 0) ++failed;
++      std::sprintf(str, "test%d",i);
++    if(std::strcmp(str, (*testP)[i].name) != 0) ++failed;
+     i++;
+   }
+-  if(failed) { exit (1); }
+-  exit (0);
++  if(failed) { std::exit (1); }
++  std::exit (0);
+ }]
+ EOF
+     if eval ./test.sh; then
+--- ./src/cudd/2.3.0/util/util.h.orig	2003-08-08 00:37:58.000000000 +0900
++++ ./src/cudd/2.3.0/util/util.h	2011-04-08 15:47:59.000000000 +0900
+@@ -42,6 +42,18 @@
+ #   define UTIL_UNUSED
+ #endif
+ 
++#ifdef _LP64
++#ifndef SIZEOF_VOID_P
++#define SIZEOF_VOID_P 8
++#endif
++#ifndef SIZEOF_INT
++#define SIZEOF_INT 4
++#endif
++#ifndef SIZEOF_LONG
++#define SIZEOF_LONG 8
++#endif
++
++#else
+ #ifndef SIZEOF_VOID_P
+ #define SIZEOF_VOID_P 4
+ #endif
+@@ -51,6 +63,7 @@
+ #ifndef SIZEOF_LONG
+ #define SIZEOF_LONG 4
+ #endif
++#endif
+ 
+ #if SIZEOF_VOID_P == 8 && SIZEOF_INT == 4
+ typedef long util_ptrint;
+--- ./src/scv/scv_constraint.cpp.orig	2003-08-08 00:37:32.000000000 +0900
++++ ./src/scv/scv_constraint.cpp	2011-04-08 15:50:47.000000000 +0900
+@@ -2826,16 +2826,16 @@
+   e = getWeightNode(Ne);
+ 
+   if (Nt != oneNode && Nt != zeroNode)  {
+-    pthenBranch = pow((double)2,(Cudd_Regular(Nt)->index - Cudd_Regular(node)->index - 1)) * t;
++    pthenBranch = pow((double)2,int(Cudd_Regular(Nt)->index - Cudd_Regular(node)->index - 1)) * t;
+   } else if (Nt == oneNode) {
+-    pthenBranch = pow((double)2,(numBddVar - Cudd_Regular(node)->index - 1)) * t;
++    pthenBranch = pow((double)2,int(numBddVar - Cudd_Regular(node)->index - 1)) * t;
+   } else {
+     pthenBranch = t ;
+   }
+   if (Ne != oneNode && Ne != zeroNode) {
+-    pelseBranch =  pow((double)2,(Cudd_Regular(Ne)->index - Cudd_Regular(node)->index - 1)) * e  ;
++    pelseBranch =  pow((double)2,int(Cudd_Regular(Ne)->index - Cudd_Regular(node)->index - 1)) * e  ;
+   } else if (Ne == oneNode) {
+-    pelseBranch = pow((double)2,(numBddVar - Cudd_Regular(node)->index - 1)) * e;
++    pelseBranch = pow((double)2,int(numBddVar - Cudd_Regular(node)->index - 1)) * e;
+   } else {
+     pelseBranch = e ;
+   }
+--- ./src/scv/scv_expression.cpp.orig	2005-10-23 04:17:16.000000000 +0900
++++ ./src/scv/scv_expression.cpp	2011-04-08 15:55:10.000000000 +0900
+@@ -364,7 +364,7 @@
+     sc_bv_base val(e.get_bit_width());
+     e.get_value(val);
+     for (int i=0; i < val.size(); i++) { 
+-      sprintf(tmpString , "%ld%s", val.get_word(i), tmpString) ;
++      sprintf(tmpString , "%ld%s", (long)val.get_word(i), tmpString) ;
+     }
+     return tmpString;
+   }

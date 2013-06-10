@@ -1,0 +1,12 @@
+see also http://thawedoutnow.blogspot.jp/2013/02/scv-for-x8664-linux-patch.html 
+
+ tar scv-1.0p2-sysc2.2.12jun06.tgz
+ cd scv-1.0p2-sysc2.2/
+ cat scv_x86_64.patch | patch -p0
+ aclocal --force 
+ autoheader --force
+ automake --force-missing --add-missing --copy
+ autoconf --force
+ ./configure --with-systemc=$SYSTEMC_HOME --prefix=$SYSTEMC_HOME
+ make
+ make install
