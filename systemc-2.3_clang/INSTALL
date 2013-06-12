@@ -1,0 +1,8 @@
+This patche lets you compile SystemC-2.3 with clang and suppress warnings with compile option -Wextra.
+
+tar zxvf systemc-2.3.0.tgz
+patch -p0 < systemc-2.3_clang.patch
+cd systemc-2.3.0
+env CC=clang CXX=clang++ CPP="clang -E" ./configure
+make
+make install

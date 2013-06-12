@@ -1,0 +1,225 @@
+diff -u systemc-2.3.0/configure systemc-2.3.0/configure
+--- systemc-2.3.0/configure	2012-07-01 01:52:59.000000000 +0900
++++ systemc-2.3.0/configure	2013-05-29 10:17:40.133169149 +0900
+@@ -5079,7 +5079,7 @@
+             ;;
+         esac
+         case "$CXX_COMP" in
+-            c++ | g++)
++            c++ | g++ | clang++)
+                 EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -m${CPU_ARCH}"
+                 EXTRA_ASFLAGS="-m${CPU_ARCH}"
+                 ;;
+diff -u systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h
+--- systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h	2012-06-11 05:17:07.000000000 +0900
++++ systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h	2013-05-29 11:36:22.367170328 +0900
+@@ -163,6 +163,12 @@
+   {
+     (get_base_export())(ifs);
+   }
++  virtual void bind(sc_core::sc_port_b<fw_interface_type> &p){//avoid warning
++      sc_core::sc_port_b<fw_interface_type>::bind(p);
++  }
++  virtual void bind(fw_interface_type &ifs){//avoid warning
++      sc_core::sc_port_b<fw_interface_type>::bind(ifs);
++  }
+ 
+   void operator() (bw_interface_type& s)
+   {
+diff -u systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h
++++ systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h	2012-06-11 05:17:06.000000000 +0900
+--- systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h	2013-06-12 17:09:02.503536174 +0900
+@@ -69,7 +69,7 @@
+     return portId << 28;
+   }
+ 
+-  sc_dt::uint64 getAddressMask(unsigned int portId)
++  sc_dt::uint64 getAddressMask(unsigned int /*portId*/)
+   {
+     return 0xfffffff;
+   }
+@@ -90,7 +90,7 @@
+   // LT protocol
+   // - forward each call to the target/initiator
+   //
+-  void initiatorBTransport(int SocketId,
++  void initiatorBTransport(int /*SocketId*/,
+                            transaction_type& trans,
+                            sc_core::sc_time& t)
+   {
+@@ -103,7 +103,7 @@
+     (*decodeSocket)->b_transport(trans, t);
+   }
+ 
+-  unsigned int transportDebug(int SocketId,
++  unsigned int transportDebug(int /*SocketId*/,
+                               transaction_type& trans)
+   {
+     unsigned int portId = decode(trans.get_address());
+@@ -134,7 +134,7 @@
+     return true;
+   }
+ 
+-  bool getDMIPointer(int SocketId,
++  bool getDMIPointer(int /*SocketId*/,
+                      transaction_type& trans,
+                      tlm::tlm_dmi&  dmi_data)
+   {
+diff -u systemc-2.3.0/src/sysc/communication/sc_fifo.h systemc-2.3.0/src/sysc/communication/sc_fifo.h
+--- systemc-2.3.0/src/sysc/communication/sc_fifo.h	2013-06-12 17:03:42.364172696 +0900
++++ systemc-2.3.0/src/sysc/communication/sc_fifo.h	2013-05-29 10:36:48.898171148 +0900
+@@ -290,17 +290,19 @@
+ template <class T>
+ inline
+ void
++#if defined(DEBUG_SYSTEMC)
+ sc_fifo<T>::trace( sc_trace_file* tf ) const
+ {
+-#if defined(DEBUG_SYSTEMC)
+     char buf[32];
+     std::string nm = name();
+     for( int i = 0; i < m_size; ++ i ) {
+ 	std::sprintf( buf, "_%d", i );
+ 	sc_trace( tf, m_buf[i], nm + buf );
+     }
++}
++#else
++sc_fifo<T>::trace( sc_trace_file* ) const{}
+ #endif
+-}
+ 
+ 
+ template <class T>
+diff -u systemc-2.3.0/src/sysc/utils/sc_pvector.h systemc-2.3.0/src/sysc/utils/sc_pvector.h
+--- systemc-2.3.0/src/sysc/utils/sc_pvector.h	2013-06-12 17:04:01.171841858 +0900
++++ systemc-2.3.0/src/sysc/utils/sc_pvector.h	2013-05-29 10:36:52.088183411 +0900
+@@ -56,7 +56,7 @@
+ 	// typedef typename ::std::vector<T>::const_iterator const_iterator;
+ 	// typedef typename ::std::vector<T>::iterator       iterator;
+ 
+-    sc_pvector( int alloc_n = 0 )
++    sc_pvector( int /*alloc_n*/ = 0 )
+ 	{
+ 	}
+ 
+diff -ur systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_endian_conv.h systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_endian_conv.h
+--- systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_endian_conv.h	2013-06-12 17:08:10.302455888 +0900
++++ systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_endian_conv.h	2013-05-29 10:37:03.907229695 +0900
+@@ -288,20 +288,20 @@
+   *dest2 = *src2;
+ }
+ 
+-inline void copy_dbtrue0(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_dbtrue0(uchar *src1, uchar * /*src2*/, uchar *dest1, uchar *dest2) {
+   *dest1 = *src1;
+   *dest2 = TLM_BYTE_ENABLED;
+ }
+ 
+-inline void copy_btrue0(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_btrue0(uchar * /*src1*/, uchar * /*src2*/, uchar * /*dest1*/, uchar *dest2) {
+   *dest2 = TLM_BYTE_ENABLED;
+ }
+ 
+-inline void copy_b0(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_b0(uchar * /*src1*/, uchar *src2, uchar * /*dest1*/, uchar *dest2) {
+   *dest2 = *src2;
+ }
+ 
+-inline void copy_dbyb0(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_dbyb0(uchar *src1, uchar * /*src2*/, uchar *dest1, uchar *dest2) {
+   if(*dest2 == TLM_BYTE_ENABLED) *src1 = *dest1;
+ }
+ 
+@@ -422,7 +422,7 @@
+ ///////////////////////////////////////////////////////////////////////////////
+ // function set (1): Utilities
+ template<class D>
+-inline void copy_d1(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_d1(uchar *src1, uchar * /*src2*/, uchar *dest1, uchar *dest2) {
+   *((D *)dest1) = *((D *)src1);
+   *((D *)dest2) = tlm_bool<D>::TLM_TRUE;
+ }
+@@ -434,22 +434,22 @@
+ }
+ 
+ template<class D>
+-inline void true_b1(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void true_b1(uchar * /*src1*/, uchar * /*src2*/, uchar * /*dest1*/, uchar *dest2) {
+   *((D *)dest2) = tlm_bool<D>::TLM_TRUE;
+ }
+ 
+ template<class D>
+-inline void copy_b1(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_b1(uchar * /*src1*/, uchar *src2, uchar * /*dest1*/, uchar *dest2) {
+   *((D *)dest2) = *((D *)src2);
+ }
+ 
+ template<class D>
+-inline void copy_dbyb1(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_dbyb1(uchar *src1, uchar *src2, uchar *dest1, uchar * /*dest2*/) {
+   if(*src2 != TLM_BYTE_DISABLED)  *((D *)src1) = *((D *)dest1);
+ }
+ 
+ template<class D>
+-inline void copy_dbytrue1(uchar *src1, uchar *src2, uchar *dest1, uchar *dest2) {
++inline void copy_dbytrue1(uchar *src1, uchar * /*src2*/, uchar *dest1, uchar * /*dest2*/) {
+   *((D *)src1) = *((D *)dest1);
+ }
+ 
+@@ -457,7 +457,7 @@
+   *((D *)dest1) = tlm_bool<D>::TLM_FALSE;
+ }
+ 
+-template<class D> inline void no_b1(uchar *dest1) {
++template<class D> inline void no_b1(uchar * /*dest1*/) {
+ }
+ 
+ template<class D,
+@@ -625,7 +625,7 @@
+ 
+ ///////////////////////////////////////////////////////////////////////////////
+ // function set (2): Utilities
+-template<class D> inline void copy_d2(D *src1, D *src2, D *dest1, D *dest2) {
++template<class D> inline void copy_d2(D *src1, D * /*src2*/, D *dest1, D * /*dest2*/) {
+   *dest1 = *src1;
+ }
+ 
+@@ -635,7 +635,7 @@
+ }
+ 
+ template<class D>
+-inline void copy_dbyb2(D *src1, D *src2, D *dest1, D *dest2) {
++inline void copy_dbyb2(D *src1, D *src2, D *dest1, D * /*dest2*/) {
+   if(tlm_bool<D>(*src2)) *dest1 = *src1;
+ }
+ 
+@@ -749,7 +749,7 @@
+ ///////////////////////////////////////////////////////////////////////////////
+ // function set (3): Response
+ template<class DATAWORD> inline void
+-tlm_from_hostendian_single(tlm_generic_payload *txn, unsigned int sizeof_databus) {
++tlm_from_hostendian_single(tlm_generic_payload * /*txn*/, unsigned int /*sizeof_databus*/) {
+   // nothing needs to be done here
+ }
+ 
+diff -ur systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_gp.h systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_gp.h
+--- systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_gp.h	2013-06-12 17:04:35.740233748 +0900
++++ systemc-2.3.0/src/tlm_core/tlm_2/tlm_generic_payload/tlm_gp.h	2013-05-29 10:37:03.916200076 +0900
+@@ -568,7 +568,7 @@
+     // call free() or tells the MM to do so
+     // it return false if there was active MM so you are now in an unsafe situation
+     // recommended use: when 100% sure there is no MM
+-    template <typename T> void clear_extension(const T* ext)
++    template <typename T> void clear_extension(const T* /*ext*/)
+     {
+         clear_extension<T>();
+     }
+@@ -585,7 +585,7 @@
+     //this call removes the extension from the txn and does
+     // call free() or tells the MM to do so when the txn is finally done
+     // recommended use: when not sure there is no MM
+-    template <typename T> void release_extension(T* ext)
++    template <typename T> void release_extension(T* /*ext*/)
+     {
+         release_extension<T>();
+     }
