@@ -1,0 +1,12 @@
+--- bootstrap-prefix.sh.orig	2013-05-17 19:54:36.000000000 +0900
++++ bootstrap-prefix.sh	2013-06-12 18:07:03.086631900 +0900
+@@ -150,7 +150,8 @@
+ 			;;
+ 		x86_64-pc-linux-gnu)
+ 			profile="${PORTDIR}/profiles/prefix/linux/amd64"
+-			ldflags_make_defaults="LDFLAGS=\"-L${ROOT}/usr/lib -Wl,-rpath=${ROOT}/usr/lib -L${ROOT}/lib -Wl,-rpath=${ROOT}/lib -L${ROOT}/tmp/usr/lib -Wl,-rpath=${ROOT}/tmp/usr/lib\""
++			#ldflags_make_defaults="LDFLAGS=\"-L${ROOT}/usr/lib -Wl,-rpath=${ROOT}/usr/lib -L${ROOT}/lib -Wl,-rpath=${ROOT}/lib -L${ROOT}/tmp/usr/lib -Wl,-rpath=${ROOT}/tmp/usr/lib\""
++			ldflags_make_defaults="LDFLAGS=\"-L${ROOT}/usr/lib -L${ROOT}/usr/lib64 -Wl,-rpath=${ROOT}/usr/lib -Wl,-rpath=${ROOT}/usr/lib64 -L${ROOT}/lib -Wl,-rpath=${ROOT}/lib -L${ROOT}/tmp/usr/lib -Wl,-rpath=${ROOT}/tmp/usr/lib\""
+ 			;;
+ 		ia64-pc-linux-gnu)
+ 			profile="${PORTDIR}/profiles/prefix/linux/ia64"

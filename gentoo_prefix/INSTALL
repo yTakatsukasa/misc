@@ -1,0 +1,17 @@
+I need this patch to bootstrap gentoo prefix on CentOS-5.8
+During the 3rd stage, libffi.so is installed at usr/lib64, but compiler does not search there and failes to link.
+This patch makes usr/lib64 to be searched.
+
+wget 'http://overlays.gentoo.org/proj/alt/browser/trunk/prefix-overlay/scripts/bootstrap-prefix.sh?format=txt' -O bootstrap-prefix.sh
+chmod +x bootstrap-prefix.sh
+patch -p0 < bootstrap_x86_64.patch
+./bootstrap-prefix.sh
+  or 
+env MAKEOPTS=-j8 GENTOO_MIRRORS=http://gentoo.gg3.net/ PORTAGE_TMPDIR=/dev/shm/ ./bootstrap-prefix.sh
+
+CAUTION
+during installation of linux-header, you must abort it with ctrl-c.
+edit usr/lib/portage/bin/ebuild-helpers/unprivileged/chown and add 'exit 0' just after shebang.
+then bootstrap again.
+
+after linux-header is installed, usr/lib/portage/bin/ebuild-helpers/unprivileged/chown should be changed to the original
