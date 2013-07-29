@@ -1,0 +1,74 @@
+--- a/prepare.sh	2013-03-16 16:29:30.274103055 +0900
++++ b/prepare.sh	2013-07-29 14:56:47.804769284 +0900
+@@ -0,0 +1,36 @@
++#!/bin/bash
++
++MAKE_JOBS=5
++install_prefix=`pwd`/required_libs
++gmp_ver=5.1.2
++mpfr_ver=3.1.2
++mpc_ver=1.0.1
++
++rm -rf required_libs
++mkdir -p required_libs/work
++cd required_libs/work
++
++wget http://www.ring.gr.jp/archives/GNU/gmp/gmp-${gmp_ver}.tar.bz2 -O - | tar jxv
++cd gmp-${gmp_ver}
++./configure --disable-shared --enable-static --prefix=${install_prefix} | 2>&1 tee log.configure
++make -j${MAKE_JOBS} | 2>&1 tee log.build
++make check | 2>&1 tee log.check
++make install | 2>&1 tee log.install
++cd ..
++
++wget http://www.ring.gr.jp/archives/GNU/mpfr/mpfr-${mpfr_ver}.tar.bz2 -O - | tar jxv
++cd mpfr-${mpfr_ver}
++./configure --disable-shared --enable-static --prefix=${install_prefix} --with-gmp=${install_prefix} | 2>&1 tee log.configure
++make -j${MAKE_JOBS} | 2>&1 tee log.build
++make check | 2>&1 tee log.check
++make install | 2>&1 tee log.install
++cd ..
++
++
++wget http://www.ring.gr.jp/archives/GNU/mpc/mpc-${mpc_ver}.tar.gz -O - | tar zxv
++cd mpc-${mpc_ver}
++./configure --disable-shared --enable-static --prefix=${install_prefix} --with-gmp=${install_prefix} --with-mpfr=${install_prefix}| 2>&1 tee log.configure
++make -j${MAKE_JOBS} | 2>&1 tee log.build
++make check | 2>&1 tee log.check
++make install | 2>&1 tee log.install
++cd ..
+diff --git a/Makefile b/Makefile
+index 240b5ed..c76f792 100644
+--- a/Makefile
++++ b/Makefile
+@@ -15,7 +15,9 @@ LOGS:=${PWD}/logs
+ 
+ MAKE_TARGETS:=binutils gcc uClibc linux-headers gcc-bootstrap or1ksim gdb openOCD
+ 
+-all: gcc gdb openOCD
++LIBS_FOR_GCC:=$(shell pwd)/required_libs
++
++all: gcc gdb
+ 
+ ${STAMPS}/build-sys-init:
+ 	@mkdir -p ${STAMPS} \
+@@ -34,7 +36,8 @@ BUILDDEPS_gcc-bootstrap := binutils ${STAMPS}/gcc-bootstrap-src-link
+ CONFIGURE_gcc-bootstrap := --target=${TARGET} --prefix=${PREFIX} \
+          --disable-libssp --srcdir=../gcc --enable-languages=c \
+          --without-headers --enable-threads=single --disable-libgomp \
+-         --disable-libmudflap
++         --disable-libmudflap \
++		 --with-gmp=${LIBS_FOR_GCC} --with-mpfr=${LIBS_FOR_GCC} --with-mpc=${LIBS_FOR_GCC}
+ 
+ ${STAMPS}/gcc-bootstrap-src-link: ${STAMPS}/build-sys-init
+ 	@ln -sf -T gcc gcc-bootstrap \
+@@ -51,7 +54,8 @@ BUILDDEPS_gcc := uClibc
+ CONFIGURE_gcc := --target=${TARGET} --prefix=${PREFIX} \
+          --disable-libssp --srcdir=../gcc --enable-languages=c,c++      \
+          --enable-threads=posix --disable-libgomp --disable-libmudflap  \
+-         --disable-shared --with-sysroot=${SYSROOT}
++         --disable-shared --with-sysroot=${SYSROOT} \
++		 --with-gmp=${LIBS_FOR_GCC} --with-mpfr=${LIBS_FOR_GCC} --with-mpc=${LIBS_FOR_GCC}
+ 
+ BUILDDEPS_or1ksim := gcc
+ CONFIGURE_or1ksim := --prefix=${PREFIX} --program-prefix=or1k
