@@ -1,0 +1,62 @@
+set nocompatible
+set fileformats=unix,dos,mac
+set backspace=indent,eol,start
+"set encoding=euc-jp
+set encoding=utf-8
+set fileencodings=utf-8,iso-2022-jp,sjis,euc-jp
+
+set notitle
+set showcmd
+set clipboard=unnamed
+
+set mouse=a
+set ttymouse=xterm2
+
+set cindent
+set tabstop=4
+set shiftwidth=4
+set softtabstop=0
+set expandtab
+
+set number
+set ruler
+set incsearch
+set hlsearch
+set wrapscan
+set smartcase
+set showmatch
+
+set nobackup
+set background=dark
+
+if &t_Co > 1
+	syntax enable
+endif
+
+function SetScreenTabName(name)
+	let arg = 'k' . a:name . '\\'
+	silent! exe '!echo -n "' . arg . "\""
+endfunction
+if $LANG =~ "UTF"
+	set termencoding=utf-8
+endif
+
+if &term =~ "screen"
+	autocmd VimLeave * call SetScreenTabName('csh')
+	autocmd BufEnter * if bufname("") !~ "^\[A-Za-z0-9\]*://" | call SetScreenTabName("%") | endif 
+endif
+
+"Verilog
+au BufReadPost * if exists("b:current_syntax")
+au BufReadPost *   if b:current_syntax == "verilog_systemverilog"
+au BufReadPost *     let b:verilog_indent_modules = 1
+au BufReadPost *   endif
+au BufReadPost * endif
+
+"Makefile
+autocmd FileType make setlocal noexpandtab
+
+"最後に開いた行で再開する
+au BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") |
+                         \ exe "normal g'\"" | endif
+let g:neocomplcache_enable_at_startup = 1
