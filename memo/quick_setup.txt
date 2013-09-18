@@ -1,0 +1,51 @@
+Putty
+http://ice.hotmint.com/putty/#DOWNLOAD
+Migu 1M
+http://mix-mplus-ipa.sourceforge.jp/migu/
+
+WinSCP
+http://winscp.net/eng/download.php
+
+TortoiseSVN
+http://tortoisesvn.net/downloads.html
+
+Firefox
+http://www.mozilla.jp/firefox/
+FireGestures
+https://addons.mozilla.org/ja/firefox/addon/firegestures/
+ツリー型タブ
+https://addons.mozilla.org/ja/firefox/addon/tree-style-tab/
+ブックマークを新しいタブで開く
+https://addons.mozilla.org/ja/firefox/addon/open-bookmarks-in-new-tab/
+Customizable Shortcuts
+https://addons.mozilla.org/ja/firefox/addon/customizable-shortcuts/
+
+Windows Pager
+http://windowspager.sourceforge.net/
+
+Xming
+http://www.straightrunning.com/XmingNotes/#head-121
+
+
+vim
+http://www.vim.org/sources.php
+
+neocomplcache
+http://qiita.com/hide/items/229ff9460e75426a2d07
+
+subversion
+http://subversion.apache.org/download/
+http://apr.apache.org/download.cgi
+http://www.sqlite.org/2013/sqlite-autoconf-3080002.tar.gz
+env LIBS=-ldl ./configure --enable-static --disable-shared --prefix=
+--with-apr= --with-apr-util= --with-sqlite= --without-apxs --without-serf
+
+colordiff
+http://www.colordiff.org/
+
+screen
+http://www.ring.gr.jp/archives/GNU/screen/
+
+lv
+http://www.mt.cs.keio.ac.jp/person/narita/lv/index_ja.html#download
+
