@@ -1,0 +1,187 @@
+Index: src/sysc/tracing/sc_vcd_trace.cpp
+===================================================================
+--- src/sysc/tracing/sc_vcd_trace.cpp
++++ src/sysc/tracing/sc_vcd_trace.cpp
+@@ -52,6 +52,10 @@
+ #include <assert.h>
+ #include <time.h>
+ #include <cstdlib>
++#include <map>
++#include <vector>
++#include <string>
++#include <algorithm> //for_each
+ 
+ #include "sysc/kernel/sc_simcontext.h"
+ #include "sysc/kernel/sc_ver.h"
+@@ -1658,6 +1662,100 @@
+            vcd_trace_file functions
+  *****************************************************************************/
+ 
++namespace{
++
++std::vector<std::string> split_by_dot(const std::string &str_){
++    std::string str = str_; 
++    remove_vcd_name_problems(str);
++    std::vector<std::string> list;
++    for(std::string::size_type start = 0; start != std::string::npos; ){
++        const std::string::size_type found = str.find('.', start);
++        if(found == std::string::npos){
++            list.push_back(str.substr(start));
++            break;
++        }
++        else if(found == start){//'..'
++            list.push_back("<unnamed1>");
++        }
++        else {//normal case
++            list.push_back(str.substr(start, found - start));
++        }
++        if(found == str.length() - 1){//end with '.'
++            list.push_back("<unnamed0>");
++            break;
++        }
++        start = found + 1;
++    }
++    return list;
++}
++
++class vcd_hier_signal;
++class vcd_hier_module;
++
++class vcd_hier_visitor_if{
++    public:
++    virtual ~vcd_hier_visitor_if(){}
++    virtual void start_of_module(const vcd_hier_module &) = 0;
++    virtual void end_of_module(const vcd_hier_module &) = 0;
++    virtual void signal(const vcd_hier_module &, const vcd_hier_signal &) = 0;
++};
++
++class vcd_hier_signal{
++    const vcd_trace &vcd_sig;
++    const std::string name;
++    public:
++    vcd_hier_signal(const vcd_trace &s, const std::string &name) : vcd_sig(s), name(name){}
++    const std::string &get_name()const{return name;}
++    const vcd_trace &get_vcd_sig()const{return vcd_sig;}
++};
++
++class vcd_hier_module{
++    template<typename T> struct delete_functor{void operator ()(std::pair<std::string, T *> ptr){delete ptr.second;}};
++    vcd_hier_module *const parent;
++    const std::string name;
++    std::map<std::string, vcd_hier_module *>  children;
++    std::map<std::string, vcd_hier_signal *> signals;
++    void add_signal(const vcd_trace &sig, const std::vector<std::string> &hier_list, unsigned int depth){
++        const std::string &nm = hier_list[depth];
++        if(depth == hier_list.size() - 1){
++            assert(signals.find(nm) == signals.end());
++            signals.insert(std::make_pair(nm, new vcd_hier_signal(sig, nm)));
++        }
++        else{
++            if(children.find(nm) == children.end()){
++                children.insert(std::make_pair(nm, new vcd_hier_module(this, nm)));
++            }
++            children[nm]->add_signal(sig, hier_list, depth + 1);
++        }
++    }
++    public:
++    vcd_hier_module(vcd_hier_module *parent, const std::string &name) : parent(parent), name(name){}
++    ~vcd_hier_module(){
++        std::for_each(children.begin(), children.end(), delete_functor<vcd_hier_module>());
++        std::for_each(signals.begin(), signals.end(), delete_functor<vcd_hier_signal>());
++    }
++    void add_signal(const vcd_trace &sig){
++        std::vector<std::string> hier_tree = split_by_dot(sig.name);
++        add_signal(sig, hier_tree, 0);
++    }
++    void visit(vcd_hier_visitor_if &ifs){
++        ifs.start_of_module(*this);
++        for(std::map<std::string, vcd_hier_signal *>::const_iterator i = signals.begin(), end = signals.end(); i != end; ++i){
++            ifs.signal(*this, *i->second);
++        }
++        for(std::map<std::string, vcd_hier_module *>::const_iterator i = children.begin(), end = children.end(); i != end; ++i){
++            i->second->visit(ifs);
++        }
++        ifs.end_of_module(*this);
++    }
++    const std::string &get_name()const{return name;}
++};
++
++
++
++} //end of unnamed namespace
++
++
+ vcd_trace_file::vcd_trace_file(const char *name)
+ : fp(0), trace_delta_cycles(false), vcd_name_index(0),
+   previous_time_units_low(0), previous_time_units_high(0), traces(),
+@@ -1743,6 +1841,7 @@
+ 	::std::cout << "WARNING: Default time step is used for VCD tracing." << ::std::endl;
+     }
+ 
++#if 0
+     // Create a dummy scope
+     std::fputs("$scope module SystemC $end\n", fp);
+ 
+@@ -1755,6 +1854,53 @@
+     }
+ 
+     std::fputs("$upscope $end\n", fp);
++#else
++    {
++        vcd_hier_module top(NULL, "SystemC");
++        for(std::vector<vcd_trace *>::const_iterator i = traces.begin(), end = traces.end(); i != end; ++i){
++            top.add_signal(**i);
++        }
++        class visitor : public vcd_hier_visitor_if{
++            std::FILE *const fp;
++            public:
++            explicit visitor(std::FILE *fp) : fp(fp){}
++            virtual void start_of_module(const vcd_hier_module &m){
++                std::fprintf(fp, "$scope module %s $end\n", m.get_name().c_str());
++            }
++            virtual void end_of_module(const vcd_hier_module &){
++                std::fputs("$upscope $end\n", fp);
++            }
++            virtual void signal(const vcd_hier_module &, const vcd_hier_signal &s){
++                const vcd_trace &sig = s.get_vcd_sig();
++                char buf[2000];//FIXME use variable length buffer or stringstream
++                if ( sig.bit_width <= 0 ){
++                    std::sprintf(buf, "Traced object \"%s\" has 0 Bits, cannot be traced.",
++                            sig.name.c_str());
++                    put_error_message(buf, false);
++                }
++                else{
++                    if ( sig.bit_width == 1 ){
++                        std::sprintf(buf, "$var %s  % 3d  %s  %s       $end\n",
++                                sig.vcd_var_typ_name,
++                                sig.bit_width,
++                                sig.vcd_name.c_str(),
++                                s.get_name().c_str());
++                    }
++                    else{
++                        std::sprintf(buf, "$var %s  % 3d  %s  %s [%d:0]  $end\n",
++                                sig.vcd_var_typ_name,
++                                sig.bit_width,
++                                sig.vcd_name.c_str(),
++                                s.get_name().c_str(),
++                                sig.bit_width-1);
++                    }
++                    std::fputs(buf, fp);
++                }
++            }
++        } v(fp);
++        top.visit(v);
++    }
++#endif
+ 
+     std::fputs("$enddefinitions  $end\n\n", fp);
+ 
+@@ -1774,7 +1920,7 @@
+ 
+ 
+     std::fputs("$dumpvars\n",fp);
+-    for (i = 0; i < (int)traces.size(); i++) {
++    for (int i = 0; i < (int)traces.size(); i++) {
+         vcd_trace* t = traces[i];
+         t->write(fp);
+         std::fputc('\n', fp);

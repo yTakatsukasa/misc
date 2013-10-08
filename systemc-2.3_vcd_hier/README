@@ -1,0 +1,15 @@
+0)About
+THis patch is written by Yutetsu TAKATSUKASA.
+NO GUARANTEE, AS-IS.
+
+1)Purpose of this patch
+PoC SystemC Simulator will save VCD file with the module hierarchy.
+Dot(.) is interpreted as a hierarchy delimiter.
+
+2)How to use
+% tar zxvf systemc-2.3.0.tgz
+% cd systemc-2.3.0
+% patch -p0 <  ../sc_vcd_trace.patch
+% ./configure --any-options
+% make
+% make install
