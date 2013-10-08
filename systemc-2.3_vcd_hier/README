@@ -13,3 +13,7 @@ Dot(.) is interpreted as a hierarchy delimiter.
 % ./configure --any-options
 % make
 % make install
+
+3)Feedback
+I only tested with examples/sysc/pkt_switch.
+Any feedback is welcome.
