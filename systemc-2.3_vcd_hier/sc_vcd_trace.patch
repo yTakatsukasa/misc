@@ -13,15 +13,13 @@ Index: src/sysc/tracing/sc_vcd_trace.cpp
  
  #include "sysc/kernel/sc_simcontext.h"
  #include "sysc/kernel/sc_ver.h"
-@@ -1658,6 +1662,100 @@
+@@ -1658,6 +1662,97 @@
             vcd_trace_file functions
   *****************************************************************************/
  
 +namespace{
 +
-+std::vector<std::string> split_by_dot(const std::string &str_){
-+    std::string str = str_; 
-+    remove_vcd_name_problems(str);
++std::vector<std::string> split_by_dot(const std::string &str){
 +    std::vector<std::string> list;
 +    for(std::string::size_type start = 0; start != std::string::npos; ){
 +        const std::string::size_type found = str.find('.', start);
@@ -90,7 +88,9 @@ Index: src/sysc/tracing/sc_vcd_trace.cpp
 +        std::for_each(signals.begin(), signals.end(), delete_functor<vcd_hier_signal>());
 +    }
 +    void add_signal(const vcd_trace &sig){
-+        std::vector<std::string> hier_tree = split_by_dot(sig.name);
++        std::string sig_name = sig.name; 
++        remove_vcd_name_problems(sig_name);
++        std::vector<std::string> hier_tree = split_by_dot(sig_name);
 +        add_signal(sig, hier_tree, 0);
 +    }
 +    void visit(vcd_hier_visitor_if &ifs){
@@ -106,30 +106,41 @@ Index: src/sysc/tracing/sc_vcd_trace.cpp
 +    const std::string &get_name()const{return name;}
 +};
 +
-+
-+
 +} //end of unnamed namespace
-+
 +
  vcd_trace_file::vcd_trace_file(const char *name)
  : fp(0), trace_delta_cycles(false), vcd_name_index(0),
    previous_time_units_low(0), previous_time_units_high(0), traces(),
-@@ -1743,6 +1841,7 @@
+@@ -1743,18 +1838,66 @@
  	::std::cout << "WARNING: Default time step is used for VCD tracing." << ::std::endl;
      }
  
-+#if 0
-     // Create a dummy scope
-     std::fputs("$scope module SystemC $end\n", fp);
+-    // Create a dummy scope
+-    std::fputs("$scope module SystemC $end\n", fp);
++    if(std::getenv("SC_VCD_NO_HIERARCHY")){
++        // Create a dummy scope
++        std::fputs("$scope module SystemC $end\n", fp);
++
++        //variable definitions:
++        int i;
++        for (i = 0; i < (int)traces.size(); i++) {
++            vcd_trace* t = traces[i];
++            t->set_width(); // needed for all vectors
++            t->print_variable_declaration_line(fp);
++        }
  
-@@ -1755,6 +1854,53 @@
-     }
- 
-     std::fputs("$upscope $end\n", fp);
-+#else
-+    {
+-    //variable definitions:
+-    int i;
+-    for (i = 0; i < (int)traces.size(); i++) {
+-        vcd_trace* t = traces[i];
+-        t->set_width(); // needed for all vectors
+-        t->print_variable_declaration_line(fp);
++        std::fputs("$upscope $end\n", fp);
++    }
++    else{
 +        vcd_hier_module top(NULL, "SystemC");
 +        for(std::vector<vcd_trace *>::const_iterator i = traces.begin(), end = traces.end(); i != end; ++i){
++           (*i)->set_width();
 +            top.add_signal(**i);
 +        }
 +        class visitor : public vcd_hier_visitor_if{
@@ -171,12 +182,13 @@ Index: src/sysc/tracing/sc_vcd_trace.cpp
 +            }
 +        } v(fp);
 +        top.visit(v);
-+    }
-+#endif
+     }
+-
+-    std::fputs("$upscope $end\n", fp);
  
      std::fputs("$enddefinitions  $end\n\n", fp);
  
-@@ -1774,7 +1920,7 @@
+@@ -1774,7 +1917,7 @@
  
  
      std::fputs("$dumpvars\n",fp);

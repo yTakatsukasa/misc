@@ -17,3 +17,9 @@ Dot(.) is interpreted as a hierarchy delimiter.
 3)Feedback
 I only tested with examples/sysc/pkt_switch.
 Any feedback is welcome.
+
+4)History
+2013/10/09
+  Fixed bug(only 1bit wire is dumped).
+  if environmental variable SC_VCD_NO_HIERARCHY is set, behave like the original one.
+2013/10/08 Inital version
