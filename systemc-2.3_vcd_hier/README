@@ -1,6 +1,6 @@
 0)About
 THis patch is written by Yutetsu TAKATSUKASA.
-NO GUARANTEE, AS-IS.
+NO WARRANTY, AS-IS.
 
 1)Purpose of this patch
 PoC SystemC Simulator will save VCD file with the module hierarchy.
@@ -19,6 +19,10 @@ I only tested with examples/sysc/pkt_switch.
 Any feedback is welcome.
 
 4)History
+2013/10/12
+  use stringstream instead of fixed sized buffer
+  not to use the original print_variable_declaration_line() function for compatibility mode
+  add doxygen style comment
 2013/10/09
   Fixed bug(only 1bit wire is dumped).
   if environmental variable SC_VCD_NO_HIERARCHY is set, behave like the original one.
