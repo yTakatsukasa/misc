@@ -15,6 +15,7 @@ if has('lua')
 endif
 NeoBundle 'Rip-Rip/clang_complete'
 
+NeoBundle 'othree/eregex.vim'
 
 NeoBundleCheck
 
