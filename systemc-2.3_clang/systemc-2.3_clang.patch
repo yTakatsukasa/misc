@@ -10,22 +10,6 @@ diff -u systemc-2.3.0/configure systemc-2.3.0/configure
                  EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -m${CPU_ARCH}"
                  EXTRA_ASFLAGS="-m${CPU_ARCH}"
                  ;;
-diff -u systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h
---- systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h	2012-06-11 05:17:07.000000000 +0900
-+++ systemc-2.3.0/src/tlm_core/tlm_2/tlm_sockets/tlm_initiator_socket.h	2013-05-29 11:36:22.367170328 +0900
-@@ -163,6 +163,12 @@
-   {
-     (get_base_export())(ifs);
-   }
-+  virtual void bind(sc_core::sc_port_b<fw_interface_type> &p){//avoid warning
-+      sc_core::sc_port_b<fw_interface_type>::bind(p);
-+  }
-+  virtual void bind(fw_interface_type &ifs){//avoid warning
-+      sc_core::sc_port_b<fw_interface_type>::bind(ifs);
-+  }
- 
-   void operator() (bw_interface_type& s)
-   {
 diff -u systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h
 +++ systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h	2012-06-11 05:17:06.000000000 +0900
 --- systemc-2.3.0/examples/tlm/common/include/models/SimpleBusLT.h	2013-06-12 17:09:02.503536174 +0900
